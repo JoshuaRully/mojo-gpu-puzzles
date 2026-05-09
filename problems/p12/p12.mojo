@@ -31,8 +31,35 @@ def dot_product(
     b: TileTensor[mut=False, dtype, LayoutType, ImmutAnyOrigin],
     size: Int,
 ):
-    # FILL ME IN (roughly 13 lines)
-    ...
+    # Allocate shared memory using stack_allocation
+    var shared = stack_allocation[
+        dtype=dtype, address_space=AddressSpace.SHARED
+    ](row_major[TPB]())
+
+    var global_i = block_dim.x * block_idx.x + thread_idx.x
+    var local_i = thread_idx.x
+    
+    # Load data into shared memory
+    if global_i < size:
+        shared[local_i] = a[global_i] * b[global_i]
+    
+    # Sync threads within block
+    barrier()
+
+    # reference material for parallel reudction strategies:
+    # https://developer.download.nvidia.com/assets/cuda/files/reduction.pdf
+    # Parallel reduction - sequential addressing - additional optimizations present above
+    # Should dive deeper into which optimizations are necessary and which are abstracted away by Mojo
+    var stride = TPB // 2
+    while stride > 0:
+        if local_i < stride:
+            shared[local_i] += shared[local_i + stride]
+
+        barrier()
+        stride //= 2
+    
+    if local_i == 0:
+        output[0] = shared[0]
 
 
 # ANCHOR_END: dot_product
