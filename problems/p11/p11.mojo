@@ -33,7 +33,20 @@ def pooling(
 
     var global_i = block_dim.x * block_idx.x + thread_idx.x
     var local_i = thread_idx.x
-    # FIX ME IN (roughly 10 lines)
+    # typo in problem description "Implement a kernel that compute[s]"
+    if global_i < size:
+        shared[local_i] = a[global_i]
+    
+    barrier()
+
+    # must be better solution to static index validation for 0 & 1
+    if global_i == 0:
+        output[0] = shared[0]
+    elif global_i == 1:
+        output[1] = shared[0] + shared[1]
+    elif 1 < global_i < size:
+        # shifting three element window
+        output[global_i] = shared[local_i - 2] + shared[local_i - 1] + shared[local_i]
 
 
 # ANCHOR_END: pooling
