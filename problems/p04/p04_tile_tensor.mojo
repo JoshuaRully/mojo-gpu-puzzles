@@ -25,8 +25,10 @@ def add_10_2d(
 ):
     var row = thread_idx.y
     var col = thread_idx.x
-    # FILL ME IN (roughly 2 lines)
-
+    if row < size and col < size:
+        output[row, col] = a[row, col] + 10
+    # tile_tensor_intro example failed due to:
+    # Unhandled exception caught during execution: At oss/modular/mojo/stdlib/std/gpu/host/device_context.mojo:2056:17: Failed to create compute pipeline state (GPU machine code generation): Compute function exceeds available stack space
 
 # ANCHOR_END: add_10_2d_tile_tensor
 
