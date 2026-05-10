@@ -34,7 +34,35 @@ def conv_1d_simple(
 ):
     var global_i = block_dim.x * block_idx.x + thread_idx.x
     var local_i = thread_idx.x
-    # FILL ME IN (roughly 14 lines)
+    # Further image convolution resources for reference:
+    # https://www.sfu.ca/~jtmulhol/py4math/linalg/ap-image-convol/
+    # Allocate shared memory using stack_allocation
+    var shared_a = stack_allocation[
+        dtype=dtype, address_space=AddressSpace.SHARED
+    ](row_major[SIZE]())
+    var shared_b = stack_allocation[
+        dtype=dtype, address_space=AddressSpace.SHARED
+    ](row_major[CONV]())
+    # load input into shared memory
+    if global_i < SIZE:
+        shared_a[local_i] = a[global_i]
+    # load kernel into shared memory
+    if global_i < CONV:
+        shared_b[local_i] = b[global_i]
+
+    # Sync threads within block
+    barrier()
+
+    if global_i < SIZE:
+        # output.ElementType via TileTensor allows type inference rather than Scalar[dtype]
+        var local_sum: Scalar[dtype] = 0
+
+        # converted pseudocode where local_i = i
+        for j in range(CONV):
+            if local_i + j < SIZE:
+                local_sum += shared_a[local_i + j] * shared_b[j]
+        
+        output[global_i] = local_sum
 
 
 # ANCHOR_END: conv_1d_simple
