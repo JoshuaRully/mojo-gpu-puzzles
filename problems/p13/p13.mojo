@@ -55,10 +55,9 @@ def conv_1d_simple(
 
     if global_i < SIZE:
         # output.ElementType via TileTensor allows type inference rather than Scalar[dtype]
-        var local_sum: Scalar[dtype] = 0
-
-        # converted pseudocode where local_i = i
-        for j in range(CONV):
+        var local_sum: output.ElementType = 0
+        # comptime unrolls convolution loop at compile time
+        comptime for j in range(CONV): #@parameter decorator is deprecated as per linter (should be corrected in book solution)
             if local_i + j < SIZE:
                 local_sum += shared_a[local_i + j] * shared_b[j]
         
