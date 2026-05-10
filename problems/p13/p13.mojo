@@ -89,9 +89,42 @@ def conv_1d_block_boundary(
     var global_i = block_dim.x * block_idx.x + thread_idx.x
     var local_i = thread_idx.x
 
-    stack_allocation[dtype=dtype, address_space=AddressSpace.SHARED](
-        row_major[TPB + CONV_2 - 1]()
-    )
+    # Allocate shared memory and account for padding
+    var shared_a = stack_allocation[
+        dtype=dtype, address_space=AddressSpace.SHARED
+    ](row_major[TPB + SIZE_2 - 1]())
+    var shared_b = stack_allocation[
+        dtype=dtype, address_space=AddressSpace.SHARED
+    ](row_major[CONV_2]())
+    if global_i < SIZE_2:
+        shared_a[local_i] = a[global_i]
+    else:
+        shared_a[local_i] = 0
+
+    # load necessary block boundary convolution elements
+    if local_i < CONV_2 - 1:
+        var next_idx = global_i + TPB
+        if next_idx < SIZE_2:
+            shared_a[TPB + local_i] = a[next_idx]
+        else:
+            # prevent out-of-bounds operations
+            shared_a[TPB + local_i] = 0
+
+    if local_i < CONV_2:
+        shared_b[local_i] = b[local_i]
+
+    # sync threads after loading data into shared memory
+    barrier()
+
+    # begin 1D convolution similar to simple implementation
+    if global_i < SIZE_2:
+        var local_sum: output.ElementType = 0
+
+        comptime for j in range(CONV_2):
+            if global_i + j < SIZE_2:
+                local_sum += shared_a[local_i + j] * shared_b[j]
+
+        output[global_i] = local_sum
 
 
 # ANCHOR_END: conv_1d_block_boundary
