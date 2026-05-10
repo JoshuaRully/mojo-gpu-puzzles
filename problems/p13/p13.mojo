@@ -57,10 +57,12 @@ def conv_1d_simple(
         # output.ElementType via TileTensor allows type inference rather than Scalar[dtype]
         var local_sum: output.ElementType = 0
         # comptime unrolls convolution loop at compile time
-        comptime for j in range(CONV): #@parameter decorator is deprecated as per linter (should be corrected in book solution)
+        comptime for j in range(
+            CONV
+        ):  # @parameter decorator is deprecated as per linter (should be corrected in book solution)
             if local_i + j < SIZE:
                 local_sum += shared_a[local_i + j] * shared_b[j]
-        
+
         output[global_i] = local_sum
 
 
@@ -86,7 +88,10 @@ def conv_1d_block_boundary(
 ):
     var global_i = block_dim.x * block_idx.x + thread_idx.x
     var local_i = thread_idx.x
-    # FILL ME IN (roughly 18 lines)
+
+    stack_allocation[dtype=dtype, address_space=AddressSpace.SHARED](
+        row_major[TPB + CONV_2 - 1]()
+    )
 
 
 # ANCHOR_END: conv_1d_block_boundary

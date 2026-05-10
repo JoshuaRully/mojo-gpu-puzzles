@@ -21,8 +21,10 @@ def add_10_guard(
     size: Int,
 ):
     var i = thread_idx.x
-    if i < size: # potentially succeeding without guard clause (maybe this is related to caching on Metal?)
-        output[i] = a[i] + 10 
+    if (
+        i < size
+    ):  # potentially succeeding without guard clause (maybe this is related to caching on Metal?)
+        output[i] = a[i] + 10
 
 
 # ANCHOR_END: add_10_guard
