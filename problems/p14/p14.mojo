@@ -30,7 +30,57 @@ def prefix_sum_simple(
 ):
     var global_i = block_dim.x * block_idx.x + thread_idx.x
     var local_i = thread_idx.x
-    # FILL ME IN (roughly 18 lines)
+    # Allocate shared memory using stack_allocation
+    var shared = stack_allocation[
+        dtype=dtype, address_space=AddressSpace.SHARED
+    ](row_major[TPB * 2]())
+    # Load input into shared memeory
+    if global_i < size:
+        shared[local_i] = a[global_i]
+    else:
+        shared[local_i] = 0
+    # Sync threads
+    barrier()
+    # reference materials for parallel prefix sum approaches:
+    # https://developer.nvidia.com/gpugems/gpugems3/part-vi-gpu-computing/chapter-39-parallel-prefix-sum-scan-cuda
+    # https://developers.redhat.com/articles/2024/08/15/your-first-gpu-algorithm-scanprefix-sum#prefix_sum
+    # TODO: debug with CUDA debugger on desktop
+    var stride = 1
+    var idx = 0
+    while stride < size:
+        barrier()
+        var src_offset = size * (idx % 2)
+        var dst_offset = size * ((idx + 1) % 2)
+
+        var val: output.ElementType = shared[src_offset + local_i]
+        if local_i >= stride:
+            val += shared[src_offset + local_i - stride]
+
+        shared[dst_offset + local_i] = val
+
+        stride *= 2
+        idx += 1
+
+        if stride * 2 >= size:
+            break
+
+    if global_i < size:
+        output[global_i] = shared[local_i]
+    # var window = 1
+    # for _ in range(Int(log2(Scalar[dtype](TPB)))): # 3 operations
+    #     var current_val: output.ElementType = 0
+    #     if local_i >= window and local_i < size:
+    #         current_val = shared[local_i - window]
+
+    #     barrier()
+    #     if local_i >= window and local_i < size:
+    #         shared[local_i] += current_val
+
+    #     barrier()
+    #     window *= 2
+
+    # if global_i < size:
+    #     output[global_i] = shared[local_i]
 
 
 # ANCHOR_END: prefix_sum_simple
